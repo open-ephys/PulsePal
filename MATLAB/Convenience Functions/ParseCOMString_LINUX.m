@@ -18,10 +18,19 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %}
 
-function ConfirmByte = SetPulsePalVoltage(ChannelID, Voltage)
-global PulsePalSystem
-Voltage = Voltage + 10;
-Voltage = Voltage / 20;
-VoltageOutput = uint8(Voltage*255);
-fwrite(PulsePalSystem.SerialPort, [PulsePalSystem.OpMenuByte char(79) char(ChannelID) char(VoltageOutput)]);
-ConfirmByte = fread(PulsePalSystem.SerialPort,1);
+function Ports = ParseCOMString_LINUX(string)
+string = strtrim(string);
+PortStringPositions = strfind(string, '/dev');
+nPorts = length(PortStringPositions);
+CandidatePorts = cell(1,nPorts);
+nGoodPorts = 0;
+for x = 1:nPorts
+    if PortStringPositions(x)+11 < length(string)
+        CandidatePort = string(PortStringPositions(x):PortStringPositions(x)+11);
+        if sum(uint8(CandidatePort)>32) == 12
+            nGoodPorts = nGoodPorts + 1;
+            CandidatePorts{nGoodPorts} = CandidatePort;
+        end
+    end
+end
+Ports = CandidatePorts(1:nGoodPorts);

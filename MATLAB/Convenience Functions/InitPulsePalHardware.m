@@ -22,16 +22,19 @@ function InitPulsePalHardware(varargin)
 
 global PulsePalSystem
 disp('Searching for Pulse Pal. Please wait.')
-
+BaudRate = 9600; % Setting this to higher baud rate on mac causes crashes, but on all platforms it is effectively ignored - actual transmission proceeds at ~1MB/s
 if nargin == 1
     Ports = {upper(varargin{1})};
 else
     % Make list of all ports
     if ispc
         Ports = FindLeafLabsPorts;
-    else
+    elseif ismac
         [trash, RawSerialPortList] = system('ls /dev/tty.*');
-        Ports = ParseCOMString_UNIX(RawSerialPortList);
+        Ports = ParseCOMString_MAC(RawSerialPortList);
+    else
+        [trash, RawSerialPortList] = system('ls /dev/ttyS1*');
+        Ports = ParseCOMString_LINUX(RawSerialPortList);
     end
 end
 if isempty(Ports)
@@ -62,7 +65,7 @@ x = 0;
 while (Found == 0) && (x < length(Ports))
     x = x + 1;
     disp(['Trying port ' Ports{x}])
-    TestSer = serial(Ports{x}, 'BaudRate', 115200, 'Timeout', 1,'OutputBufferSize', 8000, 'InputBufferSize', 8000, 'DataTerminalReady', 'off', 'tag', 'PulsePal');
+    TestSer = serial(Ports{x}, 'BaudRate', BaudRate, 'Timeout', 1,'OutputBufferSize', 100000, 'InputBufferSize', 1000, 'DataTerminalReady', 'off', 'tag', 'PulsePal');
     AvailablePort = 1;
     try
         fopen(TestSer);
@@ -71,13 +74,14 @@ while (Found == 0) && (x < length(Ports))
     end
     if AvailablePort == 1
         pause(.5);
-        fwrite(TestSer, char(72));
+        fwrite(TestSer, [PulsePalSystem.OpMenuByte 72], 'uint8');
         tic
         while TestSer.BytesAvailable == 0
-            fwrite(TestSer, char(72));
+            fwrite(TestSer, [PulsePalSystem.OpMenuByte 72], 'uint8');
             if toc > 1
                 break
             end
+            pause(.1);
         end
         g = 0;
         try
@@ -94,7 +98,7 @@ while (Found == 0) && (x < length(Ports))
     clear TestSer
 end
 if Found ~= 0
-    PulsePalSystem.SerialPort = serial(Ports{Found}, 'BaudRate', 115200, 'Timeout', 1, 'OutputBufferSize', 8000, 'InputBufferSize', 8000, 'DataTerminalReady', 'off', 'tag', 'PulsePal');
+    PulsePalSystem.SerialPort = serial(Ports{Found}, 'BaudRate', BaudRate, 'Timeout', 1, 'OutputBufferSize', 100000, 'InputBufferSize', 1000, 'DataTerminalReady', 'off', 'tag', 'PulsePal');
 else
     error('Error: could not find your Pulse Pal device. Please make sure it is connected and drivers are installed.');
 end
@@ -102,22 +106,28 @@ fopen(PulsePalSystem.SerialPort);
 pause(.1);
 tic
 while PulsePalSystem.SerialPort.BytesAvailable == 0
-        fwrite(PulsePalSystem.SerialPort, char(72));
-        pause(.1);
+    fwrite(PulsePalSystem.SerialPort, [PulsePalSystem.OpMenuByte 72], 'uint8');
         if toc > 1
-            break;
+            break
         end
+    pause(.1);
 end
 HandShakeOkByte = fread(PulsePalSystem.SerialPort, 1);
 if HandShakeOkByte == 75
     PulsePalSystem.FirmwareVersion = fread(PulsePalSystem.SerialPort, 1, 'uint32');
     switch PulsePalSystem.FirmwareVersion
         case 2
-            PulsePalSystem.CycleDuration = 100; % Loops every 100us
+            PulsePalSystem.CycleFrequency = round(20000); % Loops x 20k/sec
+            PulsePalSystem.MinPulseDuration = round(100); % Minimum user settable pulse duration in microseconds
         case 3
-            PulsePalSystem.CycleDuration = 100; % Loops every 100us
+            PulsePalSystem.CycleFrequency = round(20000); % Loops x 20k/sec
+            PulsePalSystem.MinPulseDuration = round(100); % Minimum user settable pulse duration in microseconds
         case 4
-            PulsePalSystem.CycleDuration = 100; % Loops every 100us
+            PulsePalSystem.CycleFrequency = round(20000); % Loops x 20k/sec
+            PulsePalSystem.MinPulseDuration = round(100); % Minimum user settable pulse duration in microseconds
+        case 5
+            PulsePalSystem.CycleFrequency = round(20000); % Loops x 20k/sec
+            PulsePalSystem.MinPulseDuration = round(100); % Minimum user settable pulse duration in microseconds
     end
 else
     disp('Error: Pulse Pal returned an incorrect handshake signature.')

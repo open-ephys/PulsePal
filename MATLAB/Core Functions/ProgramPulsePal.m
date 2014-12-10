@@ -49,10 +49,13 @@ global PulsePalSystem;
     Phase1Voltages = cell2mat(ProgramMatrix(3,2:5));
     % Extract pulse voltage for phase 2
     Phase2Voltages = cell2mat(ProgramMatrix(4,2:5));
+    % Extract resting voltages
+    RestingVoltages = cell2mat(ProgramMatrix(18,2:5));
     
     % Check if pulse amplitude is in range
-    if (sum(Phase1Voltages > 10) > 0) || (sum(Phase1Voltages < -10) > 0) || (sum(Phase2Voltages > 10) > 0) || (sum(Phase2Voltages < -10) > 0)
-        error('Error: Pulse voltages for Pulse Pal rev0.0.3 must be in the range -10V to 10V, and will be rounded to the nearest 78.125 mV.')
+    AllVoltages = [Phase1Voltages Phase2Voltages RestingVoltages];
+    if (sum(AllVoltages > 10) > 0) || (sum(AllVoltages < -10) > 0)
+        error('Error: Voltages for Pulse Pal rev0.4 must be in the range -10V to 10V, and will be rounded to the nearest 78.125 mV.')
     end
     
     % Check if burst duration is defined when custom timestamps target
@@ -87,6 +90,7 @@ global PulsePalSystem;
     % Extract voltages for phases 1 and 2
     Phase1Voltages = uint8(ceil(((Phase1Voltages+10)/20)*255));
     Phase2Voltages = uint8(ceil(((Phase2Voltages+10)/20)*255));
+    RestingVoltages = uint8(ceil(((RestingVoltages+10)/20)*255));
     
     % Extract input channel settings
     
@@ -97,21 +101,28 @@ global PulsePalSystem;
     
     
     % Convert time data to microseconds
-    TimeData = uint32(cell2mat(ProgramMatrix(5:12, 2:5))*1000000);
+    TimeData = cell2mat(ProgramMatrix(5:12, 2:5));
     
     % Ensure time data is within range
-    if sum(sum(rem(TimeData, PulsePalSystem.CycleDuration))) > 0
-        errordlg(['Non-zero time values for Pulse Pal rev0.4 must be multiples of ' num2str(PulsePalSystem.CycleDuration) ' microseconds. Please check your program matrix.'], 'Invalid program');
+    if sum(sum(rem(round(TimeData*1000000), PulsePalSystem.MinPulseDuration))) > 0
+        errordlg(['Non-zero time values for Pulse Pal rev0.4 must be multiples of ' num2str(PulsePalSystem.MinPulseDuration) ' microseconds. Please check your program matrix.'], 'Invalid program');
     end
+    
+    TimeData = uint32(TimeData*PulsePalSystem.CycleFrequency); % Convert to multiple of cycle frequency
+    
+    
     
     % Arrange program into a single byte-string
     FormattedProgramTimestamps = TimeData(1:end); 
-    SingleByteOutputParams = [IsBiphasic; Phase1Voltages; Phase2Voltages; FollowsCustomStimID; CustomStimTarget; CustomStimLoop];
+    SingleByteOutputParams = [IsBiphasic; Phase1Voltages; Phase2Voltages; FollowsCustomStimID; CustomStimTarget; CustomStimLoop; RestingVoltages];
     FormattedParams = [SingleByteOutputParams(1:end) Chan1TrigAddressBytes Chan2TrigAddressBytes InputChanMode];
     
     % Send program
-    fwrite(PulsePalSystem.SerialPort, 73, 'uint8'); % Instruct PulsePal to recieve a new program with byte 73
-    fwrite(PulsePalSystem.SerialPort, FormattedProgramTimestamps, 'uint32'); % Send 32 bit time data
-    fwrite(PulsePalSystem.SerialPort, FormattedParams, 'uint8'); % Send 8-bit params
+%     fwrite(PulsePalSystem.SerialPort, 73, 'uint8'); % Instruct PulsePal to recieve a new program with byte 73
+%     fwrite(PulsePalSystem.SerialPort, FormattedProgramTimestamps, 'uint32'); % Send 32 bit time data
+%     fwrite(PulsePalSystem.SerialPort, FormattedParams, 'uint8'); % Send 8-bit params
+    
+    ByteString = [PulsePalSystem.OpMenuByte 73 typecast(FormattedProgramTimestamps, 'uint8') FormattedParams];
+    fwrite(PulsePalSystem.SerialPort, ByteString, 'uint8');
     ConfirmBit = fread(PulsePalSystem.SerialPort, 1); % Get confirmation
     PulsePalSystem.CurrentProgram = OriginalProgMatrix; % Update Pulse Pal object

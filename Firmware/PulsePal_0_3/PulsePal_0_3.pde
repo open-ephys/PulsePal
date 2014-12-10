@@ -49,10 +49,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Trigger line level configuration (0 = default high, trigger low (versions with optocoupler). 1 = default low, trigger high.)
 #define TriggerLevel 0
-#define ClickerButtonLogicHigh 0
+#define ClickerButtonLogicHigh 1
 
 // Firmware build number
-unsigned long FirmwareVersion = 4;
+unsigned long FirmwareVersion = 3;
 
 // initialize LCD library with the numbers of the interface pins
 // Pins matched with hello world LCD sketch
@@ -177,9 +177,9 @@ int lastDebounceTime = 0; // to debounce the joystick button
 boolean lastButtonState = 0;
 boolean ChoiceMade = 0; // determines whether user has chosen a value from a list
 unsigned int UserValue = 0; // The current value displayed on a list of values (written to LCD when choosing parameters)
-char CommanderString[16] = " PULSE PAL v0.4";
+char CommanderString[16] = " PULSE PAL v0.3";
 char ClientStringSuffix[11] = " Connected";
-char DefaultCommanderString[16] = " PULSE PAL v0.4";
+char DefaultCommanderString[16] = " PULSE PAL v0.3";
 byte ValidEEPROMProgram = 0; // A byte read from EEPROM. This is always 1 if the EEPROM has been written to. Used to load defaults on first-time use.
 void handler(void);
 
@@ -247,9 +247,9 @@ void handler(void) {
     Timer2.resume();
   }
   if (StimulatingState == 0) {
-      if (LastStimulatingState == 1) {
+    if (LastStimulatingState == 1) {
         dacWrite(DACValues); // Update DAC
-      }
+    }
       UpdateSettingsMenu();
       SystemTime = 0;
    } else {

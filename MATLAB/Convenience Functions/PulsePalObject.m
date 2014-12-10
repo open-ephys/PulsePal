@@ -24,10 +24,13 @@ classdef PulsePalObject < handle
         GUIHandles
         Graphics
         FirmwareVersion
-        CycleDuration
+        OS
+        MinPulseDuration
+        CycleFrequency
         CurrentProgram
         PulsePalPath
         SerialPort
+        OpMenuByte
     end
     
     methods

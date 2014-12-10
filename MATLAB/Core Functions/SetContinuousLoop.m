@@ -30,7 +30,7 @@ if (Channel > 4) || (Channel < 1)
     error('Error: expected channel format is an integer 1-4')
 end
 if (State == 0) || (State == 1)
-    fwrite(PulsePalSystem.SerialPort, [82 (Channel-1) State], 'uint8');
+    fwrite(PulsePalSystem.SerialPort, [PulsePalSystem.OpMenuByte 82 Channel State], 'uint8');
 else
     error('Error: Channel state must be 0 (for normal playback) or 1 (for continuous looping)')
 end

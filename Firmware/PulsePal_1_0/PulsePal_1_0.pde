@@ -52,7 +52,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ClickerButtonLogicHigh 0
 
 // Firmware build number
-unsigned long FirmwareVersion = 4;
+unsigned long FirmwareVersion = 5;
 
 // initialize LCD library with the numbers of the interface pins
 // Pins matched with hello world LCD sketch
@@ -177,9 +177,9 @@ int lastDebounceTime = 0; // to debounce the joystick button
 boolean lastButtonState = 0;
 boolean ChoiceMade = 0; // determines whether user has chosen a value from a list
 unsigned int UserValue = 0; // The current value displayed on a list of values (written to LCD when choosing parameters)
-char CommanderString[16] = " PULSE PAL v0.4";
+char CommanderString[16] = " PULSE PAL v1.0";
 char ClientStringSuffix[11] = " Connected";
-char DefaultCommanderString[16] = " PULSE PAL v0.4";
+char DefaultCommanderString[16] = " PULSE PAL v1.0";
 byte ValidEEPROMProgram = 0; // A byte read from EEPROM. This is always 1 if the EEPROM has been written to. Used to load defaults on first-time use.
 void handler(void);
 
@@ -1871,7 +1871,7 @@ void LoadDefaultParameters() {
       IsBiphasic[x] = 0;
       Phase1Voltage[x] = 192;
       Phase2Voltage[x] = 192;
-      RestingVoltage[x] = 0;
+      RestingVoltage[x] = 128;
       CustomTrainID[x] = 0;
       CustomTrainTarget[x] = 0;
       CustomTrainLoop[x] = 0;
